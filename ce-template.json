@@ -1,0 +1,574 @@
+{
+    "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "subnetId": {
+            "type": "string",
+            "metadata": {
+                "description": "Cloud exchange virtual network subnet Resource ID."
+            }
+        },
+        "location": {
+            "type": "string",
+            "defaultValue": "[resourceGroup().location]",
+            "metadata": {
+                "description": "Azure region or location to deploy all resources."
+            }
+        },
+        "containerGroupName": {
+            "type": "string",
+            "defaultValue": "ce-containergroup",
+            "metadata": {
+                "description": "Container group name for the cloud exchange."
+            }
+        },
+        "mongodb-primary": {
+            "type": "string",
+            "defaultValue": "ce-primary",
+            "metadata": {
+                "description": "Container name for the Mongodb container."
+            }
+        },
+        "core-container": {
+            "type": "string",
+            "defaultValue": "ce-core",
+            "metadata": {
+                "description": "Container name for the cloud exchange core container."
+            }
+        },
+        "ui-container": {
+            "type": "string",
+            "defaultValue": "ce-ui",
+            "metadata": {
+                "description": "Container name for the cloud exchange ui container."
+            }
+        },
+        "rabitmq-container": {
+            "type": "string",
+            "defaultValue": "ce-rabbit-mq",
+            "metadata": {
+                "description": "Container name for the cloud exchange rabitmq container."
+            }
+        },
+        "mongo-db-image": {
+            "type": "string",
+            "metadata": {
+                "description": "Container image to deploy. Should be of the form accountName/imagename:tag for images stored in Docker Hub or a fully qualified URI for a private registry like the Azure Container Registry."
+            }
+        },
+        "core-image": {
+            "type": "string",
+            "metadata": {
+                "description": "Container image to deploy. Should be of the form accountName/imagename:tag for images stored in Docker Hub or a fully qualified URI for a private registry like the Azure Container Registry."
+            }
+        },
+        "ui-image": {
+            "type": "string",
+            "metadata": {
+                "description": "Container image to deploy. Should be of the form accountName/imagename:tag for images stored in Docker Hub or a fully qualified URI for a private registry like the Azure Container Registry."
+            }
+        },
+        "rabbitmq-image": {
+            "type": "string",
+            "metadata": {
+                "description": "Container image to deploy. Should be of the form accountName/imagename:tag for images stored in Docker Hub or a fully qualified URI for a private registry like the Azure Container Registry."
+            }
+        },
+        "mongodb-port": {
+            "type": "int",
+            "defaultValue": 27017,
+            "metadata": {
+                "description": "Port to open on the Mongodb container."
+            }
+        },
+        "core-port": {
+            "type": "int",
+            "defaultValue": 8080,
+            "metadata": {
+                "description": "Port to open on the core container."
+            }
+        },
+        "cpuCores": {
+            "type": "int",
+            "defaultValue": 1,
+            "metadata": {
+                "description": "The number of CPU cores to allocate to the container. Must be an integer."
+            }
+        },
+        "memoryInGb": {
+            "type": "int",
+            "defaultValue": 2,
+            "metadata": {
+                "description": "The amount of memory to allocate to the container in gigabytes."
+            }
+        },
+        "storageAccountName": {
+            "type": "string",
+            "defaultValue": "[format('storage{0}', uniqueString(resourceGroup().id))]",
+            "metadata": {
+                "description": "Specifies the name of the Azure Storage account."
+            }
+        },
+        "mongo-fileshare": {
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 3,
+            "metadata": {
+                "description": "Specifies the name of the File Share. File share names must be between 3 and 63 characters in length and use numbers, lower-case letters and dash (-) only."
+            },
+            "defaultValue": "mongo-data"
+        },
+        "core-fileshare": {
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 3,
+            "metadata": {
+                "description": "Specifies the name of the File Share. File share names must be between 3 and 63 characters in length and use numbers, lower-case letters and dash (-) only."
+            },
+            "defaultValue": "custom-plugins"
+        },
+        "ui-fileshare": {
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 3,
+            "metadata": {
+                "description": "Specifies the name of the File Share. File share names must be between 3 and 63 characters in length and use numbers, lower-case letters and dash (-) only."
+            },
+            "defaultValue": "ssl-certs"
+        },
+        "rabbitmq-fileshare": {
+            "type": "string",
+            "maxLength": 63,
+            "minLength": 3,
+            "metadata": {
+                "description": "Specifies the name of the File Share. File share names must be between 3 and 63 characters in length and use numbers, lower-case letters and dash (-) only."
+            },
+            "defaultValue": "rabbitmq"
+        },
+        "acrLoginServer": {
+            "type": "string",
+            "metadata": {
+                "description": "Azure container registry's login Server"
+            }
+        },
+        "acrUserName": {
+            "type": "string",
+            "metadata": {
+                "description": "Azure container registry's User Name."
+            }
+        },
+        "acrPassword": {
+            "type": "string",
+            "metadata": {
+                "description": "Azure container registry's User Password"
+            }
+        },
+        "logAnalyticsWorkspaceId": {
+            "type": "string",
+            "metadata": {
+                "description": "Log Analytics WorkspaceId."
+            }
+        },
+        "logAnalyticsWorkspaceKey": {
+            "type": "string",
+            "metadata": {
+                "description": "Log Analytics Workspace Key."
+            }
+        },
+
+        "logAnalyticsWorkspaceResourceId": {
+            "type": "string",
+            "metadata": {
+                "description": "Log Analytics Workspace Resource Id."
+            }
+        },
+
+        "maintenancePassword": {
+            "type": "string",
+            "metadata": {
+                "description": "A maintenance password that will be used for RabbitMQ and MongoDB services (This password can be set only once)"
+            }
+        },
+        "jwtSecret": {
+            "type": "string",
+            "metadata": {
+                "description": "A maintenance password that will be used for RabbitMQ and MongoDB services (This password can be set only once)"
+            }
+        }
+    },
+    "variables": {
+        "networkProfileName": "ce-networkProfile",
+        "interfaceConfigName": "eth0",
+        "interfaceIpConfig": "ipconfigprofile1"
+    },
+    "resources": [
+        {
+            "type": "Microsoft.Network/networkProfiles",
+            "apiVersion": "2020-11-01",
+            "name": "[variables('networkProfileName')]",
+            "location": "[parameters('location')]",
+            "properties": {
+                "containerNetworkInterfaceConfigurations": [
+                    {
+                        "name": "[variables('interfaceConfigName')]",
+                        "properties": {
+                            "ipConfigurations": [
+                                {
+                                    "name": "[variables('interfaceIpConfig')]",
+                                    "properties": {
+                                        "subnet": {
+                                            "id": "[parameters('subnetId')]"
+                                        }
+                                    }
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        },
+        {
+            "type": "Microsoft.ContainerInstance/containerGroups",
+            "apiVersion": "2019-12-01",
+            "name": "[parameters('containerGroupName')]",
+            "location": "[parameters('location')]",
+            "identity": {
+                "type": "SystemAssigned"
+            },
+            "properties": {
+                "containers": [
+                    {
+                        "name": "[parameters('mongodb-primary')]",
+                        "properties": {
+                            "image": "[parameters('mongo-db-image')]",
+                            "environmentVariables": [
+                                {
+                                    "name": "MONGODB_SYSTEM_LOG_VERBOSITY",
+                                    "value": "0"
+                                },
+                                {
+                                    "name": "MONGODB_DATABASE",
+                                    "value": "cte"
+                                },
+                                {
+                                    "name": "MONGODB_ROOT_PASSWORD",
+                                    "secureValue": "[parameters('maintenancePassword')]"
+                                },
+                                {
+                                    "name": "MONGODB_ADVERTISED_HOSTNAME",
+                                    "value": "localhost"
+                                },
+                                {
+                                    "name": "MONGODB_PASSWORD",
+                                    "secureValue": "[parameters('maintenancePassword')]"
+                                },
+                                {
+                                    "name": "MONGODB_USERNAME",
+                                    "value": "cteadmin"
+                                }
+                            ],
+                            "ports": [
+                                {
+                                    "port": "[parameters('mongodb-port')]",
+                                    "protocol": "TCP"
+                                }
+                            ],
+                            "resources": {
+                                "requests": {
+                                    "cpu": "[parameters('cpuCores')]",
+                                    "memoryInGB": "[parameters('memoryInGb')]"
+                                }
+                            },
+                            "volumeMounts": [
+                                {
+                                    "mountPath": "/bitnami/mongodb",
+                                    "name": "mongo-data",
+                                    "readOnly": false
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "[parameters('core-container')]",
+                        "properties": {
+                            "image": "[parameters('core-image')]",
+                            "environmentVariables": [
+                                {
+                                    "name": "MONGO_CONNECTION_STRING",
+                                    "secureValue": "[concat('mongodb://cteadmin:', parameters('maintenancePassword'), '@localhost:', parameters('mongodb-port'), '/cte')]"
+                                },
+                                {
+                                    "name": "RABBITMQ_CONNECTION_STRING",
+                                    "value": "amqp://user:bitnami@localhost"
+                                },
+                                {
+                                    "name": "WATCHTOWER_HTTP_API_TOKEN",
+                                    "value": "token"
+                                },
+                                {
+                                    "name": "ENABLE_CELERY_BEAT",
+                                    "value": "true"
+                                },
+                                {
+                                    "name": "JWT_ALGORITHM",
+                                    "value": "HS256"
+                                },
+                                {
+                                    "name": "JWT_SECRET",
+                                    "secureValue": "[parameters('jwtSecret')]"
+                                },
+                                {
+                                    "name": "INITIAL_WAIT",
+                                    "value": "600"
+                                },
+                                {
+                                    "name": "ANALYTICS_BASE_URL",
+                                    "value": "https://reporting.netskope.tech"
+                                },
+                                {
+                                    "name": "ANALYTICS_TOKEN",
+                                    "value": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpbnN0YWxsYXRpb25faWQiOiJjMDAyIn0.w8SVrTcDjk8PkR4IcbWGwOyf6-OWfCUyOoCTgZvqHqc"
+                                }
+                            ],
+                            "ports": [
+                                {
+                                    "port": "[parameters('core-port')]",
+                                    "protocol": "TCP"
+                                }
+                            ],
+                            "resources": {
+                                "requests": {
+                                    "cpu": "[parameters('cpuCores')]",
+                                    "memoryInGB": "[parameters('memoryInGb')]"
+                                }
+                            },
+                            "volumeMounts": [
+                                {
+                                    "mountPath": "/opt/netskope/plugins/custom_plugins",
+                                    "name": "custom-plugins",
+                                    "readOnly": false
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "[parameters('ui-container')]",
+                        "properties": {
+                            "image": "[parameters('ui-image')]",
+                            "environmentVariables": [
+                                {
+                                    "name": "CE_API_URL",
+                                    "value": "http://localhost"
+                                }
+                            ],
+                            "ports": [
+                                {
+                                    "port": 3000,
+                                    "protocol": "TCP"
+                                }
+                            ],
+                            "resources": {
+                                "requests": {
+                                    "cpu": "[parameters('cpuCores')]",
+                                    "memoryInGB": "[parameters('memoryInGb')]"
+                                }
+                            },
+                            "volumeMounts": [
+                                {
+                                    "mountPath": "/tmp/ssl_certs",
+                                    "name": "ssl-certs",
+                                    "readOnly": false
+                                }
+                            ]
+                        }
+                    },
+                    {
+                        "name": "[parameters('rabitmq-container')]",
+                        "properties": {
+                            "image": "[parameters('rabbitmq-image')]",
+                            "environmentVariables": [
+                                {
+                                    "name": "RABBITMQ_SECURE_PASSWORD",
+                                    "value": "yes"
+                                },
+                                {
+                                    "name": "RABBITMQ_NODE_NAME",
+                                    "value": "rabbit@127.0.0.1"
+                                },
+                                {
+                                    "name": "RABBITMQ_ERL_COOKIE",
+                                    "value": "s3cr3tc00ki3"
+                                },
+                                {
+                                    "name": "RABBITMQ_NODE_TYPE",
+                                    "value": "stats"
+                                },
+                                {
+                                    "name": "RABBITMQ_USE_LONGNAME",
+                                    "value": "true"
+                                }
+                            ],
+                            "ports": [
+                                {
+                                    "port": 15672,
+                                    "protocol": "TCP"
+                                },
+                                {
+                                    "port": 5672,
+                                    "protocol": "TCP"
+                                }
+                            ],
+                            "resources": {
+                                "requests": {
+                                    "cpu": "[parameters('cpuCores')]",
+                                    "memoryInGB": "[parameters('memoryInGb')]"
+                                }
+                            },
+                            "volumeMounts": [
+                                {
+                                    "mountPath": "/bitnami/rabbitmq/conf",
+                                    "name": "rabbitmq",
+                                    "readOnly": false
+                                }
+                            ]
+                        }
+                    }
+                ],
+                "osType": "Linux",
+                "networkProfile": {
+                    "id": "[resourceId('Microsoft.Network/networkProfiles', variables('networkProfileName'))]"
+                },
+                "restartPolicy": "Always",
+                "volumes": [
+                    {
+                        "name": "mongo-data",
+                        "azureFile": {
+                            "readOnly": false,
+                            "shareName": "[parameters('mongo-fileshare')]",
+                            "storageAccountName": "[parameters('StorageAccountName')]",
+                            "storageAccountKey": "[listKeys(parameters('storageAccountName'),'2019-06-01').keys[0].value]"
+                        }
+                    },
+                    {
+                        "name": "custom-plugins",
+                        "azureFile": {
+                            "readOnly": false,
+                            "shareName": "[parameters('core-fileshare')]",
+                            "storageAccountName": "[parameters('StorageAccountName')]",
+                            "storageAccountKey": "[listKeys(parameters('storageAccountName'),'2019-06-01').keys[0].value]"
+                        }
+                    },
+                    {
+                        "name": "ssl-certs",
+                        "azureFile": {
+                            "readOnly": false,
+                            "shareName": "[parameters('ui-fileshare')]",
+                            "storageAccountName": "[parameters('StorageAccountName')]",
+                            "storageAccountKey": "[listKeys(parameters('storageAccountName'),'2019-06-01').keys[0].value]"
+                        }
+                    },
+                    {
+                        "name": "rabbitmq",
+                        "azureFile": {
+                            "readOnly": false,
+                            "shareName": "[parameters('rabbitmq-fileshare')]",
+                            "storageAccountName": "[parameters('StorageAccountName')]",
+                            "storageAccountKey": "[listKeys(parameters('storageAccountName'),'2019-06-01').keys[0].value]"
+                        }
+                    }
+                ],
+                "imageRegistryCredentials": [
+                    {
+                        "server": "[parameters('acrLoginServer')]",
+                        "username": "[parameters('acrUserName')]",
+                        "password": "[parameters('acrPassword')]"
+                    }
+                ],
+                "diagnostics": {
+                    "logAnalytics": {
+                        "logType": "ContainerInstanceLogs",
+                        "workspaceId": "[parameters('logAnalyticsWorkspaceId')]",
+                        "workspaceKey": "[parameters('logAnalyticsWorkspaceKey')]",
+                        "workspaceResourceId": "[parameters('logAnalyticsWorkspaceResourceId')]"
+                    }
+                }
+            },
+            "dependsOn": [
+                "[ resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')) ]"
+            ]
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts",
+            "apiVersion": "2021-04-01",
+            "name": "[ parameters('storageAccountName') ]",
+            "location": "[ parameters('location') ]",
+            "kind": "StorageV2",
+            "sku": {
+                "name": "Standard_LRS"
+            },
+            "properties": {
+                "accessTier": "Hot",
+                "networkAcls": {
+                    "resourceAccessRules": [],
+                    "bypass": "AzureServices",
+                    "virtualNetworkRules": [
+                        {
+                            "id": "[ parameters('subnetId') ]",
+                            " action": "Allow"
+                        }
+                    ],
+                    "ipRules": [],
+                    "defaultAction": "Deny"
+                }
+            }
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+            "apiVersion": "2021-04-01",
+            "name": "[ format('{0}/default/{1}', parameters('storageAccountName'), parameters('mongo-fileshare')) ]",
+            "properties": {
+                "shareQuota": 20
+            },
+            "dependsOn": [
+                "[ resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')) ]"
+            ]
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+            "apiVersion": "2021-04-01",
+            "name": "[ format('{0}/default/{1}', parameters('storageAccountName'), parameters('core-fileshare')) ]",
+            "properties": {
+                "shareQuota": 20
+            },
+            "dependsOn": [
+                "[ resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')) ]"
+            ]
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+            "apiVersion": "2021-04-01",
+            "name": "[ format('{0}/default/{1}', parameters('storageAccountName'), parameters('ui-fileshare')) ]",
+            "properties": {
+                "shareQuota": 20
+            },
+            "dependsOn": ["[ resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')) ]"
+            ]
+        },
+        {
+            "type": "Microsoft.Storage/storageAccounts/fileServices/shares",
+            "apiVersion": "2021-04-01",
+            "name": "[ format('{0}/default/{1}', parameters('storageAccountName'), parameters('rabbitmq-fileshare')) ]",
+            "properties": {
+                "shareQuota": 20
+            },
+            "dependsOn": [ "[ resourceId('Microsoft.Storage/storageAccounts', parameters('storageAccountName')) ]"
+            ]
+        }
+    ],
+    "outputs": {
+        "containerIPv4Address": {
+            "type": "string",
+            "value": "[ reference(resourceId('Microsoft.ContainerInstance/containerGroups', parameters('containerGroupName'))).ipAddress.ip ]"
+        }
+    }
+}
