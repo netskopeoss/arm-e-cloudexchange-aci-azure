@@ -45,7 +45,7 @@ az group create --name netskope-rg --location "canadacentral"
 ``` sh
 docker pull netskopetechnicalalliances/cloudexchange:ui3-latest
 docker pull netskopetechnicalalliances/cloudexchange:core3-latest
-docker pull netskopetechnicalalliances/azure:rabbitmq-latest
+docker pull netskopetechnicalalliances/azure:rabbitmq
 docker pull netskopetechnicalalliances/azure:mongodb-5.0
 
 ```
